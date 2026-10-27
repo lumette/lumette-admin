@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+enum SaleStatus {
+  ACTIVE
+  SOLD_OUT
+  DISCONTINUED
+}
+
+enum ChangeField {
+  PRICE
+  STATUS
+  NAME
+}
+
+enum SyncStatus {
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+model Product {
+  id        String       @id @default(cuid())
+  sku       String       @unique
+  name      String
+  price     Decimal      @db.Decimal(18, 2)
+  status    SaleStatus   @default(ACTIVE)
+  isSample  Boolean      @default(false)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  mappings  ProductMapping[]
+
+  @@index([isSample, createdAt])
+  @@index([status])
+}
+
+model SupplierProduct {
+  id         String       @id @default(cuid())
+  supplier   String
+  externalId String
+  name       String
+  price      Decimal      @db.Decimal(18, 2)
+  status     SaleStatus   @default(ACTIVE)
+  isSample   Boolean      @default(false)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  mappings   ProductMapping[]
+  changes    ProductChangeLog[]
+
+  @@unique([supplier, externalId])
+  @@index([isSample, updatedAt])
+}
+
+model ProductMapping {
+  id                String          @id @default(cuid())
+  productId         String
+  supplierProductId String
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  product           Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
+  supplierProduct   SupplierProduct @relation(fields: [supplierProductId], references: [id], onDelete: Restrict)
+
+  @@unique([productId, supplierProductId])
+  @@index([supplierProductId])
+}
+
+model ProductChangeLog {
+  id                String          @id @default(cuid())
+  supplierProductId String
+  syncHistoryId     String
+  field             ChangeField
+  previousValue     String
+  newValue          String
+  createdAt         DateTime        @default(now())
+  supplierProduct   SupplierProduct @relation(fields: [supplierProductId], references: [id], onDelete: Restrict)
+  syncHistory       SyncHistory     @relation(fields: [syncHistoryId], references: [id], onDelete: Restrict)
+
+  @@unique([syncHistoryId, supplierProductId, field])
+  @@index([createdAt, id])
+  @@index([supplierProductId, createdAt])
+}
+
+model SyncHistory {
+  id           String     @id @default(cuid())
+  supplier     String
+  scenario     String
+  isSample     Boolean    @default(true)
+  status       SyncStatus @default(RUNNING)
+  processed    Int        @default(0)
+  changeCount  Int        @default(0)
+  errorCode    String?
+  startedAt    DateTime   @default(now())
+  completedAt  DateTime?
+  changes      ProductChangeLog[]
+
+  @@index([supplier, startedAt])
+}

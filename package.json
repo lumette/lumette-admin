@@ -1,0 +1,33 @@
+{
+  "name": "lumette-admin",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@12.15.0",
+  "engines": {
+    "node": "24.22.1"
+  },
+  "scripts": {
+    "predev": "pnpm --filter @lumette/shared build && pnpm --filter @lumette/database generate && pnpm --filter @lumette/database build",
+    "test": "pnpm --filter @lumette/database test",
+    "dev": "pnpm -r --parallel --filter @lumette/web --filter @lumette/api dev",
+    "build": "pnpm --filter @lumette/shared build && pnpm --filter @lumette/database generate && pnpm --filter @lumette/database build && pnpm --filter @lumette/api build && pnpm --filter @lumette/web build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "eslint": "^9.39.0",
+    "eslint-plugin-vue": "^10.0.0",
+    "globals": "^16.0.0",
+    "prettier": "^3.6.0",
+    "typescript-eslint": "^8.46.0",
+    "vue-eslint-parser": "^10.2.0"
+  },
+  "dependencies": {
+    "@neon/config": "^1.9.4",
+    "@neon/env": "^1.6.5"
+  }
+}

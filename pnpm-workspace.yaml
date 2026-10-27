@@ -1,0 +1,10 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+allowBuilds:
+  # Vite uses esbuild's install script to obtain its platform binary.
+  esbuild: true
+  # Prisma generates the client and downloads its engine binaries after install.
+  prisma: true
+  '@prisma/client': true
+  '@prisma/engines': true
