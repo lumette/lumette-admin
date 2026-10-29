@@ -1,3 +1,4 @@
+-- Archived, never applied: superseded sample-only schema.
 BEGIN;
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "public";

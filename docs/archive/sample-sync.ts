@@ -1,3 +1,4 @@
+// Archived sample implementation. Not compiled or executable by package scripts.
 import { prisma } from './client.js';
 import { changesBetween, sampleProducts, SAMPLE_SUPPLIER, type Scenario } from './sample.js';
 

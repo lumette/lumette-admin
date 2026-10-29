@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./mapping": {
+      "types": "./dist/mapping.d.ts",
+      "import": "./dist/mapping.js"
+    },
     "./product": {
       "types": "./dist/product.d.ts",
       "import": "./dist/product.js"

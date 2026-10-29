@@ -1,4 +1,6 @@
 node_modules/
+.diagnostics/
+apps/supplier-inspector/local-settings.js
 dist/
 .pnpm-store/
 .turbo/

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>루메뜨 거래처 구조 확인</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <h1>실버테라피 구조 확인</h1>
+    <p>로그인한 상품/검색 탭에서 실행하세요. 현재 페이지의 상품 필드만 읽습니다.</p>
+    <label>스마트스토어 품번<input id="sku" value="R221057427" maxlength="10" /></label>
+    <label>확인할 사이즈<input id="size" value="11" maxlength="30" /></label>
+    <button id="search">끝 5자리 검색 탭 열기</button>
+    <button id="analyze">현재 페이지 분석</button>
+    <p id="status" role="status">아직 분석하지 않았습니다.</p>
+    <details>
+      <summary>전송 전 상품 데이터 미리보기</summary>
+      <pre id="preview"></pre>
+    </details>
+    <button id="send" disabled>이 PC의 루메뜨 진단 도구로 보내기</button>
+    <p>검색·구매·장바구니 조작이나 DB 저장은 하지 않습니다. 쿠키·비밀번호는 수집하지 않습니다.</p>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

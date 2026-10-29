@@ -1,5 +1,24 @@
 # Lumette Admin
 
+프로젝트의 현재 구현 상태와 사용자 확정 규칙은 [개발 문서 목록](docs/README.md) 및 [프로젝트 현황 문서](docs/LUMETTE-PROJECT-STATUS.md)에서 확인할 수 있습니다. 새 PC나 새 개발 세션에서는 이 문서를 먼저 참고하세요.
+
+## 네이버 스마트스토어 API 연결 준비
+
+실버테라피 조회 대상은 내 스마트스토어에 실제 등록된 상품으로 제한합니다. [커머스 API 연결 가이드](docs/NAVER-COMMERCE-SETUP.md)에 설치와 실제 검증 결과를 기록합니다. 서버용 네이버 환경변수 이름은 루트 [.env.example](.env.example)에 있으며 실제 값은 기존 Neon 설정을 유지한 루트 `.env.local`에 직접 추가합니다. 인증정보는 채팅·Git·프론트엔드에 노출하지 않습니다. 2026-10-28에 실제 인증·상품 목록 8개·상세 8개 조회가 성공했으며 품번 원본 필드는 `originProduct.detailAttribute.manufactureDefineNo`입니다. 거래처 자동 매핑과 DB 쓰기는 아직 검증 전입니다.
+
+`apps/api`에 bcrypt 서명을 위한 `bcryptjs@3.0.3`과 서버 환경파일 로딩용 `dotenv`를 사용합니다. `pnpm install --frozen-lockfile`로 설치 후 Windows/macOS 모두 `pnpm naver:check`로 읽기 전용 연결 검증을 실행합니다. 토큰은 메모리에만 캐시하고, 진단 상품 필드는 Git 제외 폴더에 저장합니다.
+
+## 실버테라피 실제 구조 확인 (현재 진행 단계)
+
+로그인된 Chrome에서 상품 정보만 읽는 진단용 확장 프로그램을 추가했습니다. Windows와 macOS 설치·사용법은 [확장 프로그램 가이드](apps/supplier-inspector/README.md)를 참고하세요.
+
+```sh
+pnpm inspect:supplier
+pnpm test:inspector
+```
+
+초기 구조 검증 상품은 `R221057427`(스토어 미등록)이었고, 이후 실제 판매 품번 `R260115255`와 거래처 `R230315255`의 상품/옵션 구조도 확인했습니다. 확장 프로그램에서 전송한 결과는 이 PC의 `.diagnostics/silvertherapy`에만 저장되며 Git에서 제외합니다. 진단 도구용 추가 Node 패키지나 클라우드 리소스는 필요 없습니다. 확인된 옵션 가격 구조와 남은 검증 항목은 [현황 문서](docs/LUMETTE-PROJECT-STATUS.md)를 따릅니다. 기존 샘플 MVP 및 미적용 마이그레이션은 실연동 최종 설계가 아닙니다.
+
 루메뜨 관리자 서비스를 위한 pnpm 모노레포입니다.
 
 ## 개발 환경
@@ -193,3 +212,18 @@ node scripts/verify-readonly.mjs
 ```
 
 `pnpm test`는 DB를 변경하지 않는 변경 감지 단위 테스트입니다. 승인 후 실행할 실제 DB 쓰기 통합 검증 절차는 마이그레이션 계획 문서를 따릅니다. 샘플 seed는 `pnpm --filter @lumette/database seed`이며 샘플 전용 SKU·공급처 식별자·isSample 표시로 운영 데이터와 구분합니다.
+
+# 상품·옵션 매핑 개발 명령
+
+새로 설치할 패키지는 없습니다. Windows/macOS 모두 프로젝트 루트에서 실행합니다.
+
+Windows의 Prisma DLL 잠금을 피하도록 스키마·버전이 동일한 클라이언트의 재생성을 생략합니다. 스키마 변경 후 `EPERM`이 발생하면 실행 중인 개발 서버를 종료한 뒤 다시 빌드하세요. 자세한 내용은 아래 안내에 기록했습니다.
+
+- `pnpm test:mapping`: 상품·옵션 매핑 단위 테스트
+- `pnpm mapping:preview`: 기존 로컬 진단 자료로 옵션 연결 미리보기(DB 쓰기 없음)
+- `pnpm test`: 전체 빌드 후 기존 DB 유틸리티·API·매핑·확장 프로그램 테스트
+- `pnpm security:check`: Git 대상 파일에서 현재 환경파일의 비밀값·DB URL 유출 검사(값 출력 없음)
+
+최종 스키마는 [스키마·옵션 매핑 안내](docs/SCHEMA-OPTION-MAPPING.md), 2026-10-29 승인 후 production에 적용한 결과는 [DB 적용 보고](docs/DB-MIGRATION-2026-10-29.md)를 참고하세요. 테이블만 생성했으며 실제 상품 데이터는 아직 없습니다. 진단 자료는 Git 제외이므로 새 PC에서 미리보기를 실행하려면 별도로 수집해야 합니다. 향후 DB 마이그레이션도 승인 전 실행하지 않습니다.
+
+추가 패키지 설치 없이 `node scripts/verify-schema.mjs`, `node scripts/verify-products-readonly.mjs`로 최초 적용 구조와 빈 데이터 API를 읽기 전용 재검증할 수 있습니다. 먼저 `pnpm build`를 실행하세요. 이후 상품 데이터·마이그레이션이 추가되면 이 초기 검증 스크립트의 기대값을 갱신해야 합니다.

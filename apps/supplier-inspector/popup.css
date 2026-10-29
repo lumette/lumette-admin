@@ -1,0 +1,37 @@
+body {
+  width: 370px;
+  padding: 16px;
+  margin: 0;
+  font:
+    14px system-ui,
+    sans-serif;
+  color: #263344;
+}
+h1 {
+  font-size: 19px;
+}
+label {
+  display: block;
+  margin: 12px 0;
+}
+input {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px;
+}
+button {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  cursor: pointer;
+}
+pre {
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 240px;
+  overflow: auto;
+}
+p {
+  line-height: 1.6;
+}

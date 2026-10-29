@@ -10,7 +10,7 @@
     }
   },
   "scripts": {
-    "generate": "prisma generate",
+    "generate": "node scripts/generate.mjs",
     "build": "tsc -p tsconfig.json",
     "seed": "node dist/seed.js",
     "test": "node --test tests/*.test.mjs",

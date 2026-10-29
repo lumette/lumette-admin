@@ -1,4 +1,4 @@
-// Only run after approval to apply the migration and write sample data.
+// Archived sample-only integration script. Do not run against the new schema.
 import assert from 'node:assert/strict';
 import { createApp } from '../apps/api/dist/app.js';
 import { prisma, seedSamples } from '../packages/database/dist/index.js';

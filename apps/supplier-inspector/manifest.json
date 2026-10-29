@@ -1,0 +1,9 @@
+{
+  "manifest_version": 3,
+  "name": "루메뜨 실버테라피 구조 확인",
+  "version": "0.1.0",
+  "description": "사용자가 선택한 상품 페이지에서 상품 필드만 읽는 로컬 진단 도구",
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": ["http://127.0.0.1:43187/*"],
+  "action": { "default_popup": "popup.html" }
+}

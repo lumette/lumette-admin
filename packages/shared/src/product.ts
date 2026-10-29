@@ -1,10 +1,10 @@
 export interface Product {
   id: string;
   name: string;
-  sku: string;
+  sku: string | null;
   price: string;
-  status: 'ACTIVE' | 'SOLD_OUT' | 'DISCONTINUED';
-  isSample: boolean;
+  status: string;
+  mappingStatus: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -14,8 +14,8 @@ export interface ProductDetail extends Product {
     id: string;
     supplierProduct: {
       id: string;
-      name: string;
-      price: string;
+      name: string | null;
+      price: string | null;
       status: Product['status'];
       supplier: string;
       externalId: string;
@@ -25,11 +25,11 @@ export interface ProductDetail extends Product {
 
 export interface ChangeLog {
   id: string;
-  field: 'PRICE' | 'STATUS' | 'NAME';
+  field: string;
   previousValue: string;
   newValue: string;
   createdAt: string;
-  supplierProduct: { name: string; isSample: boolean };
+  supplierProduct: { name: string | null };
 }
 
 export interface Dashboard {

@@ -18,8 +18,26 @@ const detailOpen = ref(false);
 const detailLoading = ref(false);
 const detailError = ref('');
 let detailRequest = 0;
-const labels = { PRICE: '가격', STATUS: '판매 상태', NAME: '상품명' };
-const statuses = { ACTIVE: '판매 중', SOLD_OUT: '품절', DISCONTINUED: '판매 종료' };
+const labels: Record<string, string> = {
+  BASE_PRICE: '기본 가격',
+  PRODUCT_STATUS: '판매 상태',
+  PRODUCT_NAME: '상품명',
+  OPTION_PRICE: '옵션 공급가',
+  OPTION_NAME: '옵션명',
+  OPTION_BARCODE: '바코드',
+  OPTION_WEIGHT: '중량',
+  OPTION_ADDED: '옵션 추가',
+  OPTION_REMOVED: '옵션 제거',
+  OPTION_STATUS: '옵션 상태',
+};
+const statuses: Record<string, string> = {
+  SALE: '판매 중',
+  ACTIVE: '판매 중',
+  SOLD_OUT: '품절',
+  UNKNOWN: '미확인',
+  SUSPENSION: '판매 중지',
+  DISCONTINUED: '판매 종료',
+};
 
 async function api<T>(path: string): Promise<T> {
   const response = await fetch(
@@ -81,7 +99,7 @@ onMounted(load);
       <el-button :loading="loading" @click="load">새로고침</el-button>
     </header>
     <el-alert
-      title="샘플 상품에는 샘플 표시가 붙습니다. 공급처 변경은 판매 상품에 자동 반영되지 않습니다."
+      title="공급처 변경은 스마트스토어에 자동 반영되지 않습니다. 옵션 매핑과 가격은 확인 후 사용하세요."
       type="info"
       :closable="false"
     />
@@ -112,15 +130,10 @@ onMounted(load);
           >
           <el-table-column label="상태"
             ><template #default="{ row }: { row: Product }">{{
-              statuses[row.status]
+              statuses[row.status] ?? row.status
             }}</template></el-table-column
           >
-          <el-table-column label="구분"
-            ><template #default="{ row }"
-              ><el-tag v-if="row.isSample" type="info">샘플</el-tag
-              ><span v-else>운영</span></template
-            ></el-table-column
-          >
+          <el-table-column prop="mappingStatus" label="연동 상태" />
           <el-table-column label="상세"
             ><template #default="{ row }"
               ><el-button link type="primary" @click.stop="showDetail(row)"

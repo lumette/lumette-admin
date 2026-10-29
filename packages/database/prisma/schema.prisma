@@ -3,102 +3,231 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
-enum SaleStatus {
+enum SupplierStatus {
+  UNKNOWN
   ACTIVE
   SOLD_OUT
-  DISCONTINUED
 }
 
-enum ChangeField {
-  PRICE
-  STATUS
-  NAME
+enum MappingStatus {
+  UNMAPPED
+  MATCHED
+  NEEDS_REVIEW
+  UNSUPPORTED
+}
+
+enum OptionIdentitySource {
+  BARCODE_CANDIDATE
+  EXTERNAL_ID_CONFIRMED
+  MANUAL
+}
+
+enum OptionRule {
+  SIZE_ONLY_SILVER
+  COLOR_AND_SIZE
+  MANUAL
+}
+
+enum SyncSource {
+  NAVER
+  SILVERTHERAPY
+  MAPPING
 }
 
 enum SyncStatus {
   RUNNING
   SUCCESS
+  PARTIAL
   FAILED
 }
 
-model Product {
-  id        String       @id @default(cuid())
-  sku       String       @unique
-  name      String
-  price     Decimal      @db.Decimal(18, 2)
-  status    SaleStatus   @default(ACTIVE)
-  isSample  Boolean      @default(false)
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-  mappings  ProductMapping[]
+enum ChangeType {
+  PRODUCT_NAME
+  BASE_PRICE
+  PRODUCT_STATUS
+  OPTION_PRICE
+  OPTION_NAME
+  OPTION_BARCODE
+  OPTION_WEIGHT
+  OPTION_ADDED
+  OPTION_REMOVED
+  OPTION_STATUS
+}
 
-  @@index([isSample, createdAt])
-  @@index([status])
+model StoreProduct {
+  id                  String               @id @default(cuid())
+  storeKey            String
+  originProductNo     String
+  channelProductNos   Json                 @default("[]")
+  manufactureDefineNo String?
+  name                String
+  salePrice           Decimal              @db.Decimal(18, 2)
+  naverStatus         String
+  categoryCode        String?
+  mappingSuffix       String?
+  mappingStatus       MappingStatus        @default(UNMAPPED)
+  mappingReason       String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  options             StoreProductOption[]
+  mappings            ProductMapping[]
+  syncs               SyncHistory[]
+
+  @@unique([storeKey, originProductNo])
+  @@index([storeKey, manufactureDefineNo])
+  @@index([categoryCode, mappingSuffix])
+  @@index([mappingStatus, updatedAt])
+}
+
+model StoreProductOption {
+  id              String          @id @default(cuid())
+  storeProductId  String
+  naverOptionId   String
+  groupValues     Json
+  rawName         String
+  color           String?
+  size            String?
+  priceAdjustment Decimal         @db.Decimal(18, 2)
+  stockQuantity   Int?
+  usable          Boolean
+  active          Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  storeProduct    StoreProduct    @relation(fields: [storeProductId], references: [id], onDelete: Restrict)
+  mappings        OptionMapping[]
+
+  @@unique([storeProductId, naverOptionId])
+  @@unique([id, storeProductId])
+  @@index([storeProductId, active])
 }
 
 model SupplierProduct {
-  id         String       @id @default(cuid())
-  supplier   String
-  externalId String
-  name       String
-  price      Decimal      @db.Decimal(18, 2)
-  status     SaleStatus   @default(ACTIVE)
-  isSample   Boolean      @default(false)
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
-  mappings   ProductMapping[]
-  changes    ProductChangeLog[]
+  id          String                  @id @default(cuid())
+  supplier    String                  @default("silvertherapy")
+  itId        String
+  name        String?
+  basePrice   Decimal?                @db.Decimal(18, 2)
+  status      SupplierStatus          @default(UNKNOWN)
+  hasBaseline Boolean                 @default(false)
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  options     SupplierProductOption[]
+  mappings    ProductMapping[]
+  changes     ProductChangeLog[]
 
-  @@unique([supplier, externalId])
-  @@index([isSample, updatedAt])
+  @@unique([supplier, itId])
+  @@index([supplier, status])
 }
 
+model SupplierProductOption {
+  id                String               @id @default(cuid())
+  supplierProductId String
+  identityKey       String
+  identitySource    OptionIdentitySource
+  externalOptionId  String?
+  barcode           String?
+  rawName           String
+  color             String?
+  size              String?
+  supplyPrice       Decimal              @db.Decimal(18, 2)
+  weight            Decimal?             @db.Decimal(12, 4)
+  weightUnit        String?
+  active            Boolean              @default(true)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  supplierProduct   SupplierProduct      @relation(fields: [supplierProductId], references: [id], onDelete: Restrict)
+  mappings          OptionMapping[]
+  changes           ProductChangeLog[]
+
+  @@unique([supplierProductId, identityKey])
+  @@unique([id, supplierProductId])
+  @@index([supplierProductId, barcode])
+  @@index([supplierProductId, active])
+}
+
+// Unresolved candidates live on StoreProduct.mappingStatus/reason.
+// This table is only created once a supplier product is explicitly resolved.
 model ProductMapping {
   id                String          @id @default(cuid())
-  productId         String
+  storeProductId    String
   supplierProductId String
+  supplier          String          @default("silvertherapy")
+  matchKey          String
+  status            MappingStatus   @default(MATCHED)
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
-  product           Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
+  storeProduct      StoreProduct    @relation(fields: [storeProductId], references: [id], onDelete: Restrict)
   supplierProduct   SupplierProduct @relation(fields: [supplierProductId], references: [id], onDelete: Restrict)
+  options           OptionMapping[]
 
-  @@unique([productId, supplierProductId])
+  @@unique([storeProductId, supplier])
+  @@unique([id, storeProductId, supplierProductId])
   @@index([supplierProductId])
+  @@index([matchKey])
+}
+
+// Composite foreign keys prevent cross-product option associations.
+model OptionMapping {
+  id                      String                @id @default(cuid())
+  productMappingId        String
+  storeProductId          String
+  supplierProductId       String
+  storeProductOptionId    String
+  supplierProductOptionId String
+  rule                    OptionRule
+  status                  MappingStatus         @default(MATCHED)
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+  productMapping          ProductMapping        @relation(fields: [productMappingId, storeProductId, supplierProductId], references: [id, storeProductId, supplierProductId], onDelete: Restrict)
+  storeProductOption      StoreProductOption    @relation(fields: [storeProductOptionId, storeProductId], references: [id, storeProductId], onDelete: Restrict)
+  supplierProductOption   SupplierProductOption @relation(fields: [supplierProductOptionId, supplierProductId], references: [id, supplierProductId], onDelete: Restrict)
+
+  @@unique([productMappingId, storeProductOptionId])
+  @@unique([productMappingId, supplierProductOptionId])
+  @@index([storeProductOptionId, storeProductId])
+  @@index([supplierProductOptionId, supplierProductId])
 }
 
 model ProductChangeLog {
-  id                String          @id @default(cuid())
-  supplierProductId String
-  syncHistoryId     String
-  field             ChangeField
-  previousValue     String
-  newValue          String
-  createdAt         DateTime        @default(now())
-  supplierProduct   SupplierProduct @relation(fields: [supplierProductId], references: [id], onDelete: Restrict)
-  syncHistory       SyncHistory     @relation(fields: [syncHistoryId], references: [id], onDelete: Restrict)
+  id                      String                 @id @default(cuid())
+  supplierProductId       String
+  supplierProductOptionId String?
+  syncHistoryId           String
+  eventKey                String
+  type                    ChangeType
+  previousValue           Json?
+  newValue                Json?
+  createdAt               DateTime               @default(now())
+  supplierProduct         SupplierProduct        @relation(fields: [supplierProductId], references: [id], onDelete: Restrict)
+  supplierProductOption   SupplierProductOption? @relation(fields: [supplierProductOptionId, supplierProductId], references: [id, supplierProductId], onDelete: Restrict)
+  syncHistory             SyncHistory            @relation(fields: [syncHistoryId], references: [id], onDelete: Restrict)
 
-  @@unique([syncHistoryId, supplierProductId, field])
+  @@unique([syncHistoryId, eventKey])
   @@index([createdAt, id])
   @@index([supplierProductId, createdAt])
+  @@index([supplierProductOptionId, supplierProductId])
 }
 
 model SyncHistory {
-  id           String     @id @default(cuid())
-  supplier     String
-  scenario     String
-  isSample     Boolean    @default(true)
-  status       SyncStatus @default(RUNNING)
-  processed    Int        @default(0)
-  changeCount  Int        @default(0)
-  errorCode    String?
-  startedAt    DateTime   @default(now())
-  completedAt  DateTime?
-  changes      ProductChangeLog[]
+  id             String             @id @default(cuid())
+  requestKey     String?            @unique
+  source         SyncSource
+  supplier       String?
+  storeProductId String?
+  status         SyncStatus         @default(RUNNING)
+  processed      Int                @default(0)
+  changeCount    Int                @default(0)
+  errorCode      String?
+  startedAt      DateTime           @default(now())
+  completedAt    DateTime?
+  storeProduct   StoreProduct?      @relation(fields: [storeProductId], references: [id], onDelete: Restrict)
+  changes        ProductChangeLog[]
 
-  @@index([supplier, startedAt])
+  @@index([source, startedAt])
+  @@index([storeProductId, startedAt])
 }

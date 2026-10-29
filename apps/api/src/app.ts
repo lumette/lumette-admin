@@ -1,7 +1,17 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { timingSafeEqual } from 'node:crypto';
-import { prisma, syncSamples, scenarios } from '@lumette/database';
+import { prisma, type StoreProduct } from '@lumette/database';
+import { previewStoredOptionMappings } from './option-mapping.js';
+
+function productDto(product: StoreProduct) {
+  return {
+    ...product,
+    sku: product.manufactureDefineNo,
+    price: product.salePrice.toString(),
+    status: product.naverStatus,
+  };
+}
 
 export function createApp() {
   const app = Fastify({ logger: { redact: ['req.headers.authorization'] } });
@@ -22,14 +32,14 @@ export function createApp() {
     const query = request.query as { page?: string };
     const page = Math.max(1, Math.min(10000, Number.parseInt(query.page ?? '1', 10) || 1));
     const [items, total] = await prisma.$transaction([
-      prisma.product.findMany({
+      prisma.storeProduct.findMany({
         skip: (page - 1) * 20,
         take: 20,
         orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
       }),
-      prisma.product.count(),
+      prisma.storeProduct.count(),
     ]);
-    return { items, total, page, pageSize: 20 };
+    return { items: items.map(productDto), total, page, pageSize: 20 };
   });
   // Static route is deliberately registered before the product ID route.
   app.get('/api/products/changes', async () => {
@@ -37,26 +47,55 @@ export function createApp() {
       prisma.productChangeLog.findMany({
         take: 100,
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-        include: { supplierProduct: { select: { name: true, isSample: true } } },
+        include: { supplierProduct: { select: { name: true } } },
       }),
       prisma.productChangeLog.count(),
     ]);
-    return { items, total, limit: 100 };
+    return {
+      items: items.map((item) => ({
+        ...item,
+        field: item.type,
+        previousValue: JSON.stringify(item.previousValue),
+        newValue: JSON.stringify(item.newValue),
+      })),
+      total,
+      limit: 100,
+    };
   });
   app.get('/api/dashboard', async () => {
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const [productCount, recentChangeCount] = await prisma.$transaction([
-      prisma.product.count(),
+      prisma.storeProduct.count(),
       prisma.productChangeLog.count({ where: { createdAt: { gte: since } } }),
     ]);
     return { productCount, recentChangeCount, days: 7 };
   });
   app.get<{ Params: { id: string } }>('/api/products/:id', async (request, reply) => {
-    const item = await prisma.product.findUnique({
+    const item = await prisma.storeProduct.findUnique({
       where: { id: request.params.id },
-      include: { mappings: { include: { supplierProduct: true } } },
+      include: {
+        options: true,
+        mappings: {
+          include: {
+            supplierProduct: true,
+            options: { include: { storeProductOption: true, supplierProductOption: true } },
+          },
+        },
+      },
     });
-    return item ?? reply.code(404).send({ error: '상품을 찾을 수 없습니다.' });
+    if (!item) return reply.code(404).send({ error: '상품을 찾을 수 없습니다.' });
+    return {
+      ...productDto(item),
+      options: item.options,
+      mappings: item.mappings.map((mapping) => ({
+        ...mapping,
+        supplierProduct: {
+          ...mapping.supplierProduct,
+          price: mapping.supplierProduct.basePrice?.toString() ?? null,
+          externalId: mapping.supplierProduct.itId,
+        },
+      })),
+    };
   });
   app.post('/api/suppliers/sync', async (request, reply) => {
     const token = process.env.SYNC_API_TOKEN;
@@ -65,35 +104,20 @@ export function createApp() {
       token &&
       Buffer.byteLength(supplied) === Buffer.byteLength(token) &&
       timingSafeEqual(Buffer.from(supplied), Buffer.from(token));
-    // In production a token is mandatory; an unauthenticated reverse proxy
-    // cannot enable this route by supplying a forged loopback header.
     if (!authenticated) {
-      const loopback = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(request.ip);
-      if (
-        token ||
-        process.env.ALLOW_SAMPLE_SYNC !== 'true' ||
-        process.env.NODE_ENV === 'production' ||
-        !loopback
-      )
-        return reply.code(403).send({ error: '동기화 접근 권한이 없습니다.' });
+      return reply.code(403).send({ error: '동기화 접근 권한이 없습니다.' });
     }
-    const body = request.body as { source?: unknown; scenario?: unknown } | null;
-    if (
-      !body ||
-      body.source !== 'sample' ||
-      !scenarios.includes(body.scenario as (typeof scenarios)[number])
-    )
-      return reply
-        .code(400)
-        .send({ error: 'source=sample과 baseline/price/status/name 시나리오만 허용됩니다.' });
-    const result = await syncSamples(body.scenario as (typeof scenarios)[number]);
-    return {
-      id: result.id,
-      status: result.status,
-      processed: result.processed,
-      changeCount: result.changeCount,
-    };
+    return reply.code(501).send({
+      error: '샘플 동기화는 비활성화되었습니다. 실제 수집 검증 및 DB 적용 승인 후 활성화합니다.',
+    });
   });
+  app.get<{ Params: { id: string } }>(
+    '/api/products/:id/options/preview',
+    async (request, reply) => {
+      const result = await previewStoredOptionMappings(request.params.id);
+      return result ?? reply.code(404).send({ error: '상품을 찾을 수 없습니다.' });
+    },
+  );
   app.addHook('onClose', async () => {
     await prisma.$disconnect();
   });

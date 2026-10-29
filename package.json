@@ -8,8 +8,14 @@
     "node": "24.22.1"
   },
   "scripts": {
+    "security:check": "node scripts/check-secrets.mjs",
+    "mapping:preview": "pnpm --filter @lumette/shared build && node scripts/preview-mappings.mjs",
+    "test:mapping": "pnpm --filter @lumette/shared build && node --test packages/shared/tests/*.test.mjs",
+    "naver:check": "pnpm --filter @lumette/api build && pnpm --filter @lumette/api naver:check",
+    "inspect:supplier": "node scripts/supplier-inspector.mjs",
+    "test:inspector": "node --test apps/supplier-inspector/tests/*.test.mjs",
     "predev": "pnpm --filter @lumette/shared build && pnpm --filter @lumette/database generate && pnpm --filter @lumette/database build",
-    "test": "pnpm --filter @lumette/database test",
+    "test": "pnpm build && pnpm --filter @lumette/database test && pnpm --filter @lumette/api test && node --test packages/shared/tests/*.test.mjs && pnpm test:inspector",
     "dev": "pnpm -r --parallel --filter @lumette/web --filter @lumette/api dev",
     "build": "pnpm --filter @lumette/shared build && pnpm --filter @lumette/database generate && pnpm --filter @lumette/database build && pnpm --filter @lumette/api build && pnpm --filter @lumette/web build",
     "typecheck": "pnpm -r typecheck",
