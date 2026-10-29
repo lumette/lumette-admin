@@ -1,5 +1,11 @@
 # Lumette Admin
 
+## 실제 상품 데이터 가져오기
+
+2026-10-29 실제 네이버 상품 8개·옵션 16개를 production DB에 저장하고 상품 목록·상세·대시보드 API에 연결했습니다. 공급처 상품은 아직 자동 연결하지 않았습니다. [상품 바인딩 안내](docs/PRODUCT-BINDING.md)에 범위와 검증 결과를 기록했습니다.
+
+Windows/macOS 공통: `pnpm naver:import`는 DB 쓰기 없는 실제 API 미리보기, `pnpm naver:import --apply`는 DB 저장입니다. 서버용 `.env.local`과 네이버 IP 허용 설정을 먼저 확인하세요. 추가 패키지는 없습니다. DB 구분 키 `NAVER_STORE_KEY`는 기본 lumette이며 최초 저장 후 임의 변경하지 마세요. `pnpm dev` 후 상품 관리에서 상품을 클릭하면 실제 옵션·추가 판매가·재고를 조회합니다.
+
 프로젝트의 현재 구현 상태와 사용자 확정 규칙은 [개발 문서 목록](docs/README.md) 및 [프로젝트 현황 문서](docs/LUMETTE-PROJECT-STATUS.md)에서 확인할 수 있습니다. 새 PC나 새 개발 세션에서는 이 문서를 먼저 참고하세요.
 
 ## 네이버 스마트스토어 API 연결 준비
@@ -224,6 +230,6 @@ Windows의 Prisma DLL 잠금을 피하도록 스키마·버전이 동일한 클�
 - `pnpm test`: 전체 빌드 후 기존 DB 유틸리티·API·매핑·확장 프로그램 테스트
 - `pnpm security:check`: Git 대상 파일에서 현재 환경파일의 비밀값·DB URL 유출 검사(값 출력 없음)
 
-최종 스키마는 [스키마·옵션 매핑 안내](docs/SCHEMA-OPTION-MAPPING.md), 2026-10-29 승인 후 production에 적용한 결과는 [DB 적용 보고](docs/DB-MIGRATION-2026-10-29.md)를 참고하세요. 테이블만 생성했으며 실제 상품 데이터는 아직 없습니다. 진단 자료는 Git 제외이므로 새 PC에서 미리보기를 실행하려면 별도로 수집해야 합니다. 향후 DB 마이그레이션도 승인 전 실행하지 않습니다.
+최종 스키마는 [스키마·옵션 매핑 안내](docs/SCHEMA-OPTION-MAPPING.md), 2026-10-29 승인 후 production에 적용한 결과는 [DB 적용 보고](docs/DB-MIGRATION-2026-10-29.md)를 참고하세요. 후속 작업에서 실제 네이버 상품 8개·옵션 16개를 저장했습니다. 공급처 데이터·연결은 아직 없습니다. 진단 자료는 Git 제외이므로 새 PC에서 미리보기를 실행하려면 별도로 수집해야 합니다. 향후 DB 마이그레이션도 승인 전 실행하지 않습니다.
 
-추가 패키지 설치 없이 `node scripts/verify-schema.mjs`, `node scripts/verify-products-readonly.mjs`로 최초 적용 구조와 빈 데이터 API를 읽기 전용 재검증할 수 있습니다. 먼저 `pnpm build`를 실행하세요. 이후 상품 데이터·마이그레이션이 추가되면 이 초기 검증 스크립트의 기대값을 갱신해야 합니다.
+추가 패키지 설치 없이 `node scripts/verify-schema.mjs`, `node scripts/verify-products-readonly.mjs`로 적용 구조와 현재 DB/API를 읽기 전용 재검증할 수 있습니다. 상품 바인딩 상세 검증은 `node scripts/verify-bound-products.mjs`입니다. 먼저 `pnpm build`를 실행하세요. 이후 스키마 변경·공급처 연결이 추가되면 검증 스크립트의 기대값을 갱신해야 합니다.

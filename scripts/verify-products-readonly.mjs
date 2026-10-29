@@ -1,8 +1,13 @@
 import assert from 'node:assert/strict';
 import { createApp } from '../apps/api/dist/app.js';
+import { prisma } from '../packages/database/dist/index.js';
 
 const app = createApp();
 try {
+  const [products, changes] = await prisma.$transaction([
+    prisma.storeProduct.count(),
+    prisma.productChangeLog.count(),
+  ]);
   for (const path of [
     '/health',
     '/health/db',
@@ -15,12 +20,13 @@ try {
     const body = response.json();
     if (path === '/health/db') assert.equal(body.database, 'connected');
     if (Array.isArray(body.items)) {
-      assert.equal(body.items.length, 0);
-      assert.equal(body.total, 0);
+      const expected = path === '/api/products' ? products : changes;
+      assert.equal(body.items.length, Math.min(expected, path === '/api/products' ? 20 : 100));
+      assert.equal(body.total, expected);
     }
     if (path === '/api/dashboard') {
-      assert.equal(body.productCount, 0);
-      assert.equal(body.recentChangeCount, 0);
+      assert.equal(body.productCount, products);
+      assert.ok(body.recentChangeCount >= 0 && body.recentChangeCount <= changes);
     }
     console.log(
       JSON.stringify({

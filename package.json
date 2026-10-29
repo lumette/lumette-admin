@@ -8,6 +8,7 @@
     "node": "24.22.1"
   },
   "scripts": {
+    "naver:import": "pnpm --filter @lumette/shared build && pnpm --filter @lumette/database build && pnpm --filter @lumette/api build && pnpm --filter @lumette/api naver:import",
     "security:check": "node scripts/check-secrets.mjs",
     "mapping:preview": "pnpm --filter @lumette/shared build && node scripts/preview-mappings.mjs",
     "test:mapping": "pnpm --filter @lumette/shared build && node --test packages/shared/tests/*.test.mjs",

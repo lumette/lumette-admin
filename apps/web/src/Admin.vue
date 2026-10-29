@@ -32,11 +32,18 @@ const labels: Record<string, string> = {
 };
 const statuses: Record<string, string> = {
   SALE: '판매 중',
+  OUTOFSTOCK: '품절',
   ACTIVE: '판매 중',
   SOLD_OUT: '품절',
   UNKNOWN: '미확인',
   SUSPENSION: '판매 중지',
   DISCONTINUED: '판매 종료',
+};
+const mappingStatuses: Record<string, string> = {
+  UNMAPPED: '공급처 검색 대기',
+  MATCHED: '연결됨',
+  NEEDS_REVIEW: '확인 필요',
+  UNSUPPORTED: '품번 확인 필요',
 };
 
 async function api<T>(path: string): Promise<T> {
@@ -133,7 +140,11 @@ onMounted(load);
               statuses[row.status] ?? row.status
             }}</template></el-table-column
           >
-          <el-table-column prop="mappingStatus" label="연동 상태" />
+          <el-table-column label="연동 상태" min-width="150"
+            ><template #default="{ row }: { row: Product }">{{
+              mappingStatuses[row.mappingStatus] ?? row.mappingStatus
+            }}</template></el-table-column
+          >
           <el-table-column label="상세"
             ><template #default="{ row }"
               ><el-button link type="primary" @click.stop="showDetail(row)"
@@ -175,7 +186,26 @@ onMounted(load);
         <template v-if="detail"
           ><h2>{{ detail.name }}</h2>
           <p>{{ detail.sku }}</p>
-          <p>판매 가격: {{ detail.price }} 원 · {{ statuses[detail.status] }}</p>
+          <p>판매 가격: {{ detail.price }} 원 · {{ statuses[detail.status] ?? detail.status }}</p>
+          <p>공급처 연동: {{ mappingStatuses[detail.mappingStatus] ?? detail.mappingStatus }}</p>
+          <h3>스마트스토어 옵션</h3>
+          <p>추가 판매가는 네이버 판매가 기준이며 공급처 공급가가 아닙니다.</p>
+          <el-empty v-if="!detail.options.length" description="등록된 조합형 옵션이 없습니다." />
+          <el-table v-else :data="detail.options">
+            <el-table-column prop="rawName" label="옵션" min-width="90" />
+            <el-table-column prop="color" label="색상 규칙" min-width="90" />
+            <el-table-column prop="priceAdjustment" label="추가 판매가" min-width="110" />
+            <el-table-column label="재고"
+              ><template #default="{ row }">{{
+                row.stockQuantity ?? '미제공'
+              }}</template></el-table-column
+            >
+            <el-table-column label="상태"
+              ><template #default="{ row }">{{
+                !row.active ? '제거됨' : row.usable ? '사용' : '미사용'
+              }}</template></el-table-column
+            >
+          </el-table>
           <h3>연결된 공급처 상품</h3>
           <el-empty
             v-if="!detail.mappings.length"

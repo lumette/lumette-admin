@@ -10,6 +10,17 @@ export interface Product {
 }
 
 export interface ProductDetail extends Product {
+  options: {
+    id: string;
+    naverOptionId: string;
+    rawName: string;
+    color: string | null;
+    size: string | null;
+    priceAdjustment: string;
+    stockQuantity: number | null;
+    usable: boolean;
+    active: boolean;
+  }[];
   mappings: {
     id: string;
     supplierProduct: {

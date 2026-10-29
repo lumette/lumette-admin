@@ -288,6 +288,8 @@ Neon 프로젝트 ID는 `crimson-rain-48779096`입니다. 추가 DB 브랜치·c
 
 ## 15. 관련 문서
 
+2026-10-29 후속: 실제 네이버 상품 8개·옵션 16개를 DB에 바인딩했습니다. 재수입 시 0 UPDATE와 동일 요청 키 중복 방지를 확인했습니다. 공급처 매핑은 미검증 상태를 유지합니다. [최신 상품 바인딩 기록](PRODUCT-BINDING.md).
+
 - [문서 목록](README.md)
 - [프로젝트 설치·실행 README](../README.md)
 - [실버테라피 상세 관측 기록](SILVERTHERAPY-RESEARCH.md)

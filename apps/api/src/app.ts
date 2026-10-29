@@ -74,7 +74,7 @@ export function createApp() {
     const item = await prisma.storeProduct.findUnique({
       where: { id: request.params.id },
       include: {
-        options: true,
+        options: { orderBy: { naverOptionId: 'asc' } },
         mappings: {
           include: {
             supplierProduct: true,
